@@ -68,21 +68,26 @@ function MapPage() {
 
     const marker = updatedMarkers[index];
     if (marker.id) {
-      try {
-        // Оновлюємо дані маркера в Firebase
-        const markerRef = doc(db, "markers", marker.id); // Отримуємо референс до документа
-        await updateDoc(markerRef, {
-          lat: marker.lat,
-          lng: marker.lng,
-          timestamp: new Date(), // Оновлюємо timestamp
-        });
+        try {
+            // Логування для перевірки
+            console.log("Updating marker in Firebase", marker.id, marker.lat, marker.lng);
 
-        console.log("Marker updated in Firebase", marker.id);
-      } catch (error) {
-        console.error("Error updating marker in Firebase:", error);
-      }
+            // Оновлюємо дані маркера в Firebase
+            const markerRef = doc(db, "markers", marker.id); // Отримуємо референс до документа
+            await updateDoc(markerRef, {
+                lat: marker.lat,
+                lng: marker.lng,
+                timestamp: new Date(), // Оновлюємо timestamp
+            });
+
+            console.log("Marker updated in Firebase", marker.id);
+        } catch (error) {
+            console.error("Error updating marker in Firebase:", error);
+        }
+    } else {
+        console.error("No marker ID found for this marker", marker);
     }
-  };
+};
 
   const handleMarkerClick = async (index: number) => {
     const marker = markers[index];
