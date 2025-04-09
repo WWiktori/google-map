@@ -13,8 +13,11 @@ import {
   doc,
 } from "firebase/firestore";
 
-// Генерація унікального ідентифікатора для пристрою
-const deviceId = `device-${Math.random().toString(36).substr(2, 9)}`;
+// Отримуємо або генеруємо унікальний deviceId
+const deviceId = localStorage.getItem("deviceId") || `device-${Math.random().toString(36).substr(2, 9)}`;
+if (!localStorage.getItem("deviceId")) {
+  localStorage.setItem("deviceId", deviceId); // Зберігаємо deviceId в localStorage
+}
 
 const center = { lat: 49.8397, lng: 24.0297 };
 
