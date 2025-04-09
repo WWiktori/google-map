@@ -5,7 +5,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<MapPage />} />
+        <Route path="/google-map" element={<MapPage />} />
       </Routes>
     </Router>
   );

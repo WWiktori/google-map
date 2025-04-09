@@ -3,7 +3,8 @@ import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { HiOutlineLocationMarker } from "react-icons/hi";
 import { MdDeleteSweep } from "react-icons/md";
-import { db, auth } from "../Firebase/Firebase"; // Додано import auth для Firebase Authentication
+import { db } from "../Firebase/Firebase";
+
 import {
   collection,
   addDoc,
@@ -27,14 +28,9 @@ function MapPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [showList, setShowList] = useState(false);
 
-  // Отримуємо UID поточного користувача з Firebase Authentication
-  const userId = auth.currentUser?.uid;
-
   useEffect(() => {
-    if (!userId) return; // Перевірка, чи є користувач автентифікований
-
     const loadMarkers = async () => {
-      const querySnapshot = await getDocs(collection(db, "users", userId, "markers"));
+      const querySnapshot = await getDocs(collection(db, "markers"));
       const loaded: MarkerType[] = [];
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
@@ -44,21 +40,26 @@ function MapPage() {
     };
 
     loadMarkers();
-  }, [userId]);
+  }, []);
 
   const handleMapClick = useCallback(
     async (e: google.maps.MapMouseEvent) => {
-      if (!isAdding || !e.latLng || !userId) return;
+      if (!isAdding || !e.latLng) return;
+
       const newMarker: MarkerType = {
         lat: e.latLng.lat(),
         lng: e.latLng.lng(),
         timestamp: new Date(),
       };
 
-      const docRef = await addDoc(collection(db, "users", userId, "markers"), newMarker);
-      setMarkers((current) => [...current, { ...newMarker, id: docRef.id }]);
+      try {
+        const docRef = await addDoc(collection(db, "markers"), newMarker);
+        setMarkers((current) => [...current, { ...newMarker, id: docRef.id }]);
+      } catch (error) {
+        console.error("Error adding marker: ", error);
+      }
     },
-    [isAdding, userId]
+    [isAdding]
   );
 
   const handleMarkerDragEnd = (index: number, e: google.maps.MapMouseEvent) => {
@@ -72,8 +73,8 @@ function MapPage() {
 
   const handleMarkerClick = async (index: number) => {
     const marker = markers[index];
-    if (!isAdding && marker.id && userId) {
-      await deleteDoc(doc(db, "users", userId, "markers", marker.id));
+    if (!isAdding && marker.id) {
+      await deleteDoc(doc(db, "markers", marker.id));
       setMarkers((current) => current.filter((_, i) => i !== index));
     }
   };
@@ -81,10 +82,9 @@ function MapPage() {
   const toggleAddMode = () => setIsAdding((prev) => !prev);
 
   const handleClearMarkers = async () => {
-    if (!userId) return;
     for (const marker of markers) {
       if (marker.id) {
-        await deleteDoc(doc(db, "users", userId, "markers", marker.id));
+        await deleteDoc(doc(db, "markers", marker.id));
       }
     }
     setMarkers([]);
@@ -101,9 +101,6 @@ function MapPage() {
   if (!isLoaded) {
     return <div className="text-center mt-20 text-xl">Loading map...</div>;
   }
-
-
-
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
       <GoogleMap
