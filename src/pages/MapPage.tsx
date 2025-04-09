@@ -73,28 +73,34 @@ function MapPage() {
     [isAdding]
   );
 
-  const handleMarkerDragEnd = async (index: number, e: google.maps.MapMouseEvent) => {
-    const latLng = e.latLng;
-    if (!latLng) return;
-  
-    const updatedMarkers = [...markers];
-    updatedMarkers[index] = { lat: latLng.lat(), lng: latLng.lng(), deviceId };
-    setMarkers(updatedMarkers);
-  
-    const marker = updatedMarkers[index];
-    if (marker.id) {
-      try {
-        const markerRef = doc(db, "markers", marker.id);
-        await updateDoc(markerRef, {
-          lat: marker.lat,
-          lng: marker.lng,
-          timestamp: new Date(),
-        });
-      } catch (error) {
-        console.error("Error updating marker: ", error);
-      }
+const handleMarkerDragEnd = async (index: number, e: google.maps.MapMouseEvent) => {
+  const latLng = e.latLng;
+  if (!latLng) return;
+
+  const updatedMarkers = [...markers];
+  updatedMarkers[index] = { lat: latLng.lat(), lng: latLng.lng(), deviceId };
+  setMarkers(updatedMarkers); // Оновлюємо локальний стан
+
+  const marker = updatedMarkers[index];
+  if (marker.id) {
+    try {
+      // Переконуємося, що id маркера існує
+      console.log("Updating marker:", marker);
+
+      const markerRef = doc(db, "markers", marker.id); // Оновлюємо дані у Firebase
+      await updateDoc(markerRef, {
+        lat: marker.lat,
+        lng: marker.lng,
+        timestamp: new Date(), // Оновлюємо timestamp
+      });
+
+      console.log("Marker updated in Firebase");
+    } catch (error) {
+      console.error("Error updating marker:", error);
     }
-  };
+  }
+};
+
 
   const handleMarkerClick = async (index: number) => {
     const marker = markers[index];
