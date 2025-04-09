@@ -11,12 +11,12 @@ import {
   getDocs,
   deleteDoc,
   doc,
+  updateDoc,
 } from "firebase/firestore";
 
-// Отримуємо або генеруємо унікальний deviceId
 const deviceId = localStorage.getItem("deviceId") || `device-${Math.random().toString(36).substr(2, 9)}`;
 if (!localStorage.getItem("deviceId")) {
-  localStorage.setItem("deviceId", deviceId); // Зберігаємо deviceId в localStorage
+  localStorage.setItem("deviceId", deviceId);
 }
 
 const center = { lat: 49.8397, lng: 24.0297 };
@@ -36,14 +36,13 @@ function MapPage() {
 
   useEffect(() => {
     const loadMarkers = async () => {
-      // Завантаження маркерів тільки для поточного пристрою
       const querySnapshot = await getDocs(
         collection(db, "markers")
       );
       const loaded: MarkerType[] = [];
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        if (data.deviceId === deviceId) { // Перевірка на відповідність ідентифікатора пристрою
+        if (data.deviceId === deviceId) {
           loaded.push({ id: docSnap.id, lat: data.lat, lng: data.lng, timestamp: data.timestamp, deviceId: data.deviceId });
         }
       });
@@ -61,11 +60,10 @@ function MapPage() {
         lat: e.latLng.lat(),
         lng: e.latLng.lng(),
         timestamp: new Date(),
-        deviceId: deviceId, // Додаємо ідентифікатор пристрою
+        deviceId: deviceId,
       };
 
       try {
-        // Збереження маркера з ідентифікатором пристрою
         const docRef = await addDoc(collection(db, "markers"), newMarker);
         setMarkers((current) => [...current, { ...newMarker, id: docRef.id }]);
       } catch (error) {
@@ -75,13 +73,27 @@ function MapPage() {
     [isAdding]
   );
 
-  const handleMarkerDragEnd = (index: number, e: google.maps.MapMouseEvent) => {
+  const handleMarkerDragEnd = async (index: number, e: google.maps.MapMouseEvent) => {
     const latLng = e.latLng;
     if (!latLng) return;
-
+  
     const updatedMarkers = [...markers];
     updatedMarkers[index] = { lat: latLng.lat(), lng: latLng.lng(), deviceId };
     setMarkers(updatedMarkers);
+  
+    const marker = updatedMarkers[index];
+    if (marker.id) {
+      try {
+        const markerRef = doc(db, "markers", marker.id);
+        await updateDoc(markerRef, {
+          lat: marker.lat,
+          lng: marker.lng,
+          timestamp: new Date(),
+        });
+      } catch (error) {
+        console.error("Error updating marker: ", error);
+      }
+    }
   };
 
   const handleMarkerClick = async (index: number) => {
