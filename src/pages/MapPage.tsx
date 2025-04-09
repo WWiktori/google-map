@@ -13,9 +13,12 @@ import {
   doc,
 } from "firebase/firestore";
 
+// Генерація унікального ідентифікатора для пристрою
+const deviceId = `device-${Math.random().toString(36).substr(2, 9)}`;
+
 const center = { lat: 49.8397, lng: 24.0297 };
 
-type MarkerType = { id?: string; lat: number; lng: number; timestamp?: Date };
+type MarkerType = { id?: string; lat: number; lng: number; timestamp?: Date; deviceId: string };
 
 function MapPage() {
   const { isLoaded } = useJsApiLoader({
@@ -30,11 +33,16 @@ function MapPage() {
 
   useEffect(() => {
     const loadMarkers = async () => {
-      const querySnapshot = await getDocs(collection(db, "markers"));
+      // Завантаження маркерів тільки для поточного пристрою
+      const querySnapshot = await getDocs(
+        collection(db, "markers")
+      );
       const loaded: MarkerType[] = [];
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        loaded.push({ id: docSnap.id, lat: data.lat, lng: data.lng, timestamp: data.timestamp });
+        if (data.deviceId === deviceId) { // Перевірка на відповідність ідентифікатора пристрою
+          loaded.push({ id: docSnap.id, lat: data.lat, lng: data.lng, timestamp: data.timestamp, deviceId: data.deviceId });
+        }
       });
       setMarkers(loaded);
     };
@@ -50,9 +58,11 @@ function MapPage() {
         lat: e.latLng.lat(),
         lng: e.latLng.lng(),
         timestamp: new Date(),
+        deviceId: deviceId, // Додаємо ідентифікатор пристрою
       };
 
       try {
+        // Збереження маркера з ідентифікатором пристрою
         const docRef = await addDoc(collection(db, "markers"), newMarker);
         setMarkers((current) => [...current, { ...newMarker, id: docRef.id }]);
       } catch (error) {
@@ -67,7 +77,7 @@ function MapPage() {
     if (!latLng) return;
 
     const updatedMarkers = [...markers];
-    updatedMarkers[index] = { lat: latLng.lat(), lng: latLng.lng() };
+    updatedMarkers[index] = { lat: latLng.lat(), lng: latLng.lng(), deviceId };
     setMarkers(updatedMarkers);
   };
 
@@ -101,6 +111,7 @@ function MapPage() {
   if (!isLoaded) {
     return <div className="text-center mt-20 text-xl">Loading map...</div>;
   }
+
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
       <GoogleMap
